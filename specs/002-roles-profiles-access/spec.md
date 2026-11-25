@@ -79,7 +79,7 @@ An administrator adds new roles, giving each a name and description and choosing
 
 ### Edge Cases
 
-- A user without a profile, or whose profile has no roles: they can sign in but see no menus or actions, apart from an informative message.
+- A user whose profile has no roles: they can sign in but see no menus or actions, apart from an informative message. Every user always has a profile, since new sign-ups go to the default profile.
 - The last remaining administrator cannot be moved to another profile, removed, or have the administrator profile's management roles removed, so the application is never left without an administrator.
 - The administrator profile always holds every role, including roles created later.
 - A profile's roles are changed while its users are signed in: the change applies no later than the user's next request/page load, without needing to sign in again.
@@ -94,6 +94,8 @@ An administrator adds new roles, giving each a name and description and choosing
 - **FR-001**: System MUST support roles, each enabling exactly one application element (e.g. a menu entry, a button, an action).
 - **FR-002**: System MUST support profiles, each being a set of zero or more roles; a role may belong to many profiles.
 - **FR-003**: Every user MUST belong to exactly one profile.
+- **FR-018**: System MUST provide a built-in default profile "Utenti", which cannot be deleted or renamed and to which every self-registered user is assigned (see 003-clerk-auth-sync).
+- **FR-019**: Administrators MUST be able to block and unblock users (see 003-clerk-auth-sync); the last administrator cannot be blocked.
 - **FR-004**: System MUST show a user only the menus, buttons and other controls enabled by the roles of the user's profile.
 - **FR-005**: System MUST refuse any action not enabled by the roles of the user's profile, even when attempted without using the interface, and MUST leave data unchanged.
 - **FR-006**: System MUST provide an administrator profile that holds all roles, including those created later, and can access user, profile and role management.
@@ -134,6 +136,7 @@ An administrator adds new roles, giving each a name and description and choosing
 - Administrators can create profiles as well as assigning roles to them (implied by "associate roles to profiles").
 - A role enables one application element; the application defines the set of available elements, and new roles are chosen from it. Creating a role cannot introduce new application behavior, only enable what exists.
 - A user belongs to exactly one profile at a time; the same person needing a different mix of access uses a different profile.
+- The default profile "Utenti" is built-in and holds only the minimal roles needed for a regular user; the administrator can change which roles it holds.
 - The administrator profile is built-in, cannot be deleted or have roles removed, and an initial administrator exists at first start.
 - Roles are additive: a profile's access is the union of its roles; there are no "deny" roles.
 - Existing features (e.g. projects and tasks from 001-project-entity) will have their menus and actions gated by roles defined by this feature.

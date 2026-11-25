@@ -22,12 +22,28 @@ Users sign in to the application using Clerk, the approved authentication provid
 
 1. **Given** an application user who also exists in Clerk, **When** they sign in with valid credentials, **Then** they reach the application with the menus and actions of their profile.
 2. **Given** an unauthenticated visitor, **When** they open any application page, **Then** they are asked to sign in and no application data is shown.
-3. **Given** a person who authenticates successfully with Clerk but has no corresponding application user, **When** they try to enter, **Then** access is refused with a message that they are not authorized.
+3. **Given** a user whose account is blocked, **When** they try to sign in, **Then** access is refused with a message that the account is blocked.
 4. **Given** a signed-in user, **When** they sign out, **Then** the session ends and protected pages require signing in again.
 
 ---
 
-### User Story 2 - Creating a user also creates it in Clerk (Priority: P1)
+### User Story 2 - Self-registration into the default profile (Priority: P1)
+
+A visitor can sign up on their own. On sign-up the application creates a user for them, placed automatically in the default profile "Utenti", and they can use the application with the access of that profile. An administrator can later move them to another profile.
+
+**Why this priority**: It lets people join without administrator involvement, while keeping their access minimal by default.
+
+**Independent Test**: Sign up as a new person; verify a user exists in the "Utenti" profile and sees only what that profile allows.
+
+**Acceptance Scenarios**:
+
+1. **Given** a visitor with no account, **When** they sign up with a valid email, **Then** a user is created in the application in the "Utenti" profile and they can use the application with that profile's access.
+2. **Given** an email already used by an existing user, **When** a visitor tries to sign up with it, **Then** no second user is created and they are directed to sign in instead.
+3. **Given** a person who exists in Clerk but has no application user (e.g. created directly in Clerk), **When** they sign in for the first time, **Then** an application user is created for them in the "Utenti" profile.
+
+---
+
+### User Story 3 - Creating a user also creates it in Clerk (Priority: P1)
 
 When an administrator creates a user in the application, the user is automatically created in Clerk too, so the new user can sign in without any manual step on Clerk. The administrator never needs to open Clerk.
 
@@ -43,7 +59,7 @@ When an administrator creates a user in the application, the user is automatical
 
 ---
 
-### User Story 3 - Deleting a user also deletes it in Clerk (Priority: P2)
+### User Story 4 - Deleting a user also deletes it in Clerk (Priority: P2)
 
 When an administrator deletes a user in the application, the corresponding Clerk account is deleted too, so the person can no longer sign in and active sessions end.
 
@@ -59,7 +75,25 @@ When an administrator deletes a user in the application, the corresponding Clerk
 
 ---
 
-### User Story 4 - Keep users aligned and recover from mismatches (Priority: P3)
+### User Story 5 - Administrator changes passwords and blocks users (Priority: P2)
+
+An administrator can set a new password for any user and can block or unblock any user's account. A blocked user cannot sign in and any active session ends.
+
+**Why this priority**: It gives administrators control over compromised or unwanted accounts.
+
+**Independent Test**: Block a signed-in user; verify their next request is refused and sign-in fails; unblock and verify sign-in works. Change a user's password and verify only the new one works.
+
+**Acceptance Scenarios**:
+
+1. **Given** an existing user, **When** the administrator sets a new password, **Then** the user can sign in with the new password and no longer with the old one.
+2. **Given** an existing user, **When** the administrator blocks the account, **Then** the user can no longer sign in and active sessions end by their next request.
+3. **Given** a blocked user, **When** the administrator unblocks the account, **Then** the user can sign in again with the same profile as before.
+4. **Given** the administrator tries to block their own account or the last administrator, **When** they confirm, **Then** it is refused.
+5. **Given** Clerk rejects or cannot perform the password change or block, **When** the administrator submits it, **Then** nothing changes in either system and the reason is shown.
+
+---
+
+### User Story 6 - Keep users aligned and recover from mismatches (Priority: P3)
 
 Administrators can see whether each application user is correctly linked to a Clerk account, and can fix mismatches (for example a user existing only on one side) without creating duplicates.
 
@@ -78,7 +112,9 @@ Administrators can see whether each application user is correctly linked to a Cl
 
 - Clerk becomes unavailable during creation or deletion: the operation fails as a whole, with no half-created or half-deleted user (see FR-005).
 - An administrator tries to delete their own user, or the last administrator: refused (rule from 002-roles-profiles-access, FR-014).
-- A user is created or deleted directly in Clerk (outside the application): the application does not grant access to Clerk-only people and flags application-only users as not linked.
+- A user is deleted directly in Clerk (outside the application): the application flags the user as not linked. A person created directly in Clerk gets an application user in the "Utenti" profile at first sign-in.
+- A blocked user attempts to sign up again with the same email: refused, since the user already exists.
+- A user is blocked or has the password changed while signed in: it takes effect by the next request.
 - The same email in different letter case: treated as the same user.
 - A user's email is changed in the application: the change is applied to Clerk too, or refused as a whole.
 - Two administrators create the same user at the same time: only one succeeds, the other is told the user already exists.
@@ -88,12 +124,15 @@ Administrators can see whether each application user is correctly linked to a Cl
 ### Functional Requirements
 
 - **FR-001**: Sign-in and authentication of application users MUST be performed through Clerk.
-- **FR-002**: System MUST allow access only to people authenticated by Clerk who correspond to an existing application user; all others MUST be refused.
+- **FR-002**: System MUST allow access only to people authenticated by Clerk who correspond to an existing, non-blocked application user.
 - **FR-003**: When an administrator creates a user, System MUST automatically create the corresponding account in Clerk, with no manual step.
 - **FR-004**: When an administrator deletes a user, System MUST automatically delete the corresponding account in Clerk and end that user's access.
 - **FR-005**: Creation and deletion MUST be all-or-nothing: if the operation fails in either the application or Clerk, the state in both systems MUST remain as before, and the administrator MUST be told the reason.
 - **FR-006**: System MUST link each application user to exactly one Clerk account, identified by the user's email, and refuse creation when the email is already in use.
-- **FR-007**: Application users MUST NOT be able to self-register; users only exist when created by an administrator.
+- **FR-007**: Visitors MUST be able to sign up on their own; on sign-up (or at first sign-in of a person already in Clerk) System MUST create an application user in the default profile "Utenti".
+- **FR-014**: Administrators MUST be able to set a new password for any user; System MUST NOT allow anyone to view existing passwords.
+- **FR-015**: Administrators MUST be able to block and unblock any user's account; a blocked user MUST NOT be able to sign in and active sessions MUST end by their next request.
+- **FR-016**: System MUST refuse blocking the administrator's own account and the last administrator.
 - **FR-008**: When a user's email is changed by an administrator, System MUST apply the change in Clerk as well, or refuse the whole change.
 - **FR-009**: System MUST show administrators which users are not linked to a Clerk account and allow re-creating the link.
 - **FR-010**: Profiles, roles and access rules MUST be stored and decided by the application, not by Clerk.
@@ -103,7 +142,7 @@ Administrators can see whether each application user is correctly linked to a Cl
 
 ### Key Entities
 
-- **User**: An application user (see 002-roles-profiles-access) with an email and a link to exactly one Clerk account.
+- **User**: An application user (see 002-roles-profiles-access) with an email, a status (active / blocked) and a link to exactly one Clerk account.
 - **Clerk account**: The sign-in identity held by Clerk for a user; created and deleted together with the user.
 - **Link status**: Whether a user is correctly linked to a Clerk account (linked / not linked).
 
@@ -114,7 +153,8 @@ Administrators can see whether each application user is correctly linked to a Cl
 - **SC-001**: An administrator creates a user who can sign in immediately, in a single operation of under 1 minute and with no action outside the application.
 - **SC-002**: A deleted user cannot sign in, and their active session is refused, within 1 minute of deletion.
 - **SC-003**: In 100% of tested failure cases (Clerk unavailable, duplicate email), no user is left existing in only one of the two systems after creation or deletion.
-- **SC-004**: 100% of people authenticated by Clerk without a matching application user are refused access.
+- **SC-004**: 100% of new sign-ups end up in the "Utenti" profile and nothing beyond its access is available to them.
+- **SC-006**: A blocked user cannot sign in, and their active session is refused, within 1 minute of blocking.
 - **SC-005**: An administrator can identify all non-linked users from a single view and repair one in under 1 minute.
 
 ## Assumptions
@@ -122,6 +162,9 @@ Administrators can see whether each application user is correctly linked to a Cl
 - Clerk is the single approved identity provider; its use as a hard requirement for sign-in is permitted by constitution v2.0.0, limited to authentication and user management.
 - The sign-in method offered to users (e.g. email and password, email codes) is configured in Clerk and is not decided by this feature.
 - The application user's email is the key linking the two systems; email is unique across users.
+- Self-registered users receive no roles beyond those of the "Utenti" profile; sign-up requires only what Clerk is configured to require (e.g. email verification).
+- Setting a password means the administrator chooses a new one; existing passwords are never visible.
+- Blocking is reversible and keeps the user's data and profile.
 - The first administrator is created at initial setup (outside this feature) and linked to Clerk.
 - Roles, profiles and permissions are those of 002-roles-profiles-access; Clerk stores only identity and credentials.
 - Deleting a user is permanent in both systems; no recovery period is provided.
