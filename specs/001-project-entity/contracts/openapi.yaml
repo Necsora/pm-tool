@@ -1,0 +1,117 @@
+openapi: 3.1.0
+info:
+  title: pm-tool API — Projects and Tasks
+  version: 0.1.0
+  license: { name: AGPL-3.0-or-later, identifier: AGPL-3.0-or-later }
+paths:
+  /people:
+    get: { summary: List people, responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Person" } } } } } } }
+    post:
+      summary: Create a person (candidate project manager)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PersonInput" } } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Person" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /projects:
+    get: { summary: List projects, responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Project" } } } } } } }
+    post:
+      summary: Create a project
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProjectInput" } } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Project" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /projects/{projectId}:
+    parameters: [ { $ref: "#/components/parameters/ProjectId" } ]
+    get:
+      summary: Project detail including its tasks
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ProjectDetail" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      summary: Replace project attributes
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProjectInput" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Project" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      summary: Delete a project and all its tasks (UI asks confirmation first)
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /projects/{projectId}/tasks:
+    parameters: [ { $ref: "#/components/parameters/ProjectId" } ]
+    get:
+      summary: List tasks of a project
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Task" } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      summary: Add a task to a project
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TaskInput" } } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /projects/{projectId}/tasks/{taskId}:
+    parameters:
+      - { $ref: "#/components/parameters/ProjectId" }
+      - { name: taskId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      summary: Edit a task
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TaskInput" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Task" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      summary: Delete a task
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+components:
+  parameters:
+    ProjectId: { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    NotFound: { description: Resource not found (also when the task is not in the given project) }
+    ValidationError: { description: Missing/invalid fields or end_date earlier than start_date, with per-field messages }
+  schemas:
+    PersonInput:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        email: { type: string, format: email, maxLength: 254 }
+    Person:
+      allOf:
+        - $ref: "#/components/schemas/PersonInput"
+        - { type: object, required: [id], properties: { id: { type: string, format: uuid } } }
+    ProjectInput:
+      type: object
+      required: [name, start_date, end_date, project_manager_id]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date, description: Must be on or after start_date }
+        project_manager_id: { type: string, format: uuid }
+    Project:
+      allOf:
+        - $ref: "#/components/schemas/ProjectInput"
+        - { type: object, required: [id], properties: { id: { type: string, format: uuid }, task_count: { type: integer } } }
+    ProjectDetail:
+      allOf:
+        - $ref: "#/components/schemas/Project"
+        - type: object
+          properties:
+            project_manager: { $ref: "#/components/schemas/Person" }
+            tasks: { type: array, items: { $ref: "#/components/schemas/Task" } }
+    TaskInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+    Task:
+      allOf:
+        - $ref: "#/components/schemas/TaskInput"
+        - { type: object, required: [id, project_id], properties: { id: { type: string, format: uuid }, project_id: { type: string, format: uuid } } }
